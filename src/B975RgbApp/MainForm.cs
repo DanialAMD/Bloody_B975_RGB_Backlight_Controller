@@ -45,6 +45,8 @@ internal sealed class MainForm : Form
         _effectColors = LoadEffectColors(_settings.EffectColors);
 
         AppLanguage.BindControl(this, "کنترل RGB کیبورد Bloody B975", "Bloody B975 RGB Controller");
+        Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath)
+            ?? SystemIcons.Application;
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(780, 660);
         Size = new Size(860, 720);
@@ -555,7 +557,10 @@ internal sealed class MainForm : Form
 
     private void OpenKeyboardEditor()
     {
-        using var editor = new KeyboardLightingEditorForm(_settings.BackgroundLedHex, _backgroundColor);
+        using var editor = new KeyboardLightingEditorForm(_settings.BackgroundLedHex, _backgroundColor)
+        {
+            Icon = (Icon)Icon.Clone()
+        };
         if (editor.ShowDialog(this) != DialogResult.OK)
         {
             return;
@@ -797,7 +802,7 @@ internal sealed class MainForm : Form
         var icon = new NotifyIcon
         {
             Text = "Bloody B975 RGB Controller",
-            Icon = SystemIcons.Application,
+            Icon = Icon,
             ContextMenuStrip = menu,
             Visible = true
         };

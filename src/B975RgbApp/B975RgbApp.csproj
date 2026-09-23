@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Bloody.ico</ApplicationIcon>
     <AssemblyName>B975RgbApp</AssemblyName>
     <RootNamespace>B975RgbApp</RootNamespace>
     <PublishSingleFile>true</PublishSingleFile>
