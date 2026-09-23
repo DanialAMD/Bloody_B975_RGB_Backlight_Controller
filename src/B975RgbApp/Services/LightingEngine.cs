@@ -12,8 +12,9 @@ internal sealed class LightingEngine : IDisposable
     private const int LedCount = 116;
     private const int FrameMilliseconds = 40;
 
-    private readonly ConcurrentDictionary<int, long> _activeKeys = new();
+    private readonly ConcurrentDictionary<long, ActiveTrigger> _activeTriggers = new();
     private readonly object _stateLock = new();
+    private long _triggerSequence;
     private CancellationTokenSource? _cancellation;
     private Task? _worker;
     private bool _disposed;
@@ -47,7 +48,8 @@ internal sealed class LightingEngine : IDisposable
                 throw;
             }
 
-            _activeKeys.Clear();
+            _activeTriggers.Clear();
+            Interlocked.Exchange(ref _triggerSequence, 0);
             _cancellation = new CancellationTokenSource();
             _isRunning = true;
             _worker = Task.Run(() => RunLoop(device, settings, _cancellation.Token));
@@ -61,7 +63,8 @@ internal sealed class LightingEngine : IDisposable
             return;
         }
 
-        _activeKeys[ledIndex] = Stopwatch.GetTimestamp();
+        var triggerId = Interlocked.Increment(ref _triggerSequence);
+        _activeTriggers[triggerId] = new ActiveTrigger(ledIndex, Stopwatch.GetTimestamp());
     }
 
     public async Task StopAsync()
@@ -133,7 +136,7 @@ internal sealed class LightingEngine : IDisposable
         finally
         {
             device.Dispose();
-            _activeKeys.Clear();
+            _activeTriggers.Clear();
 
             lock (_stateLock)
             {
@@ -178,18 +181,19 @@ internal sealed class LightingEngine : IDisposable
         var duration = Math.Clamp(durationMilliseconds, 250, 5_000);
         var now = Stopwatch.GetTimestamp();
 
-        foreach (var item in _activeKeys)
+        foreach (var item in _activeTriggers)
         {
-            if (!KeyboardGeometry.TryGetCenter(item.Key, out var origin))
+            var trigger = item.Value;
+            if (!KeyboardGeometry.TryGetCenter(trigger.LedIndex, out var origin))
             {
-                _activeKeys.TryRemove(item.Key, out _);
+                _activeTriggers.TryRemove(item.Key, out _);
                 continue;
             }
 
-            var ageMilliseconds = (now - item.Value) * 1000.0 / Stopwatch.Frequency;
+            var ageMilliseconds = (now - trigger.Timestamp) * 1000.0 / Stopwatch.Frequency;
             if (ageMilliseconds >= duration)
             {
-                _activeKeys.TryRemove(item.Key, out _);
+                _activeTriggers.TryRemove(item.Key, out _);
                 continue;
             }
 
@@ -244,20 +248,21 @@ internal sealed class LightingEngine : IDisposable
         int fadeMilliseconds)
     {
         var now = Stopwatch.GetTimestamp();
-        foreach (var item in _activeKeys)
+        foreach (var item in _activeTriggers)
         {
-            var ageMilliseconds = (now - item.Value) * 1000.0 / Stopwatch.Frequency;
+            var trigger = item.Value;
+            var ageMilliseconds = (now - trigger.Timestamp) * 1000.0 / Stopwatch.Frequency;
             if (ageMilliseconds >= fadeMilliseconds)
             {
-                _activeKeys.TryRemove(item.Key, out _);
+                _activeTriggers.TryRemove(item.Key, out _);
                 continue;
             }
 
             var strength = 1.0 - ageMilliseconds / fadeMilliseconds;
             var color = InterpolatePalette(colors, ageMilliseconds / fadeMilliseconds * colors.Length);
-            reds[item.Key] = Blend(reds[item.Key], color.R, strength);
-            greens[item.Key] = Blend(greens[item.Key], color.G, strength);
-            blues[item.Key] = Blend(blues[item.Key], color.B, strength);
+            reds[trigger.LedIndex] = Blend(reds[trigger.LedIndex], color.R, strength);
+            greens[trigger.LedIndex] = Blend(greens[trigger.LedIndex], color.G, strength);
+            blues[trigger.LedIndex] = Blend(blues[trigger.LedIndex], color.B, strength);
         }
     }
 
@@ -311,23 +316,24 @@ internal sealed class LightingEngine : IDisposable
 
         var stepMilliseconds = Math.Clamp(140 - settings.MeteorSpeed * 15, 35, 125);
         var now = Stopwatch.GetTimestamp();
-        foreach (var item in _activeKeys)
+        foreach (var item in _activeTriggers)
         {
-            if (!TryGetRow(item.Key, out var rowStart, out var rowEnd))
+            var trigger = item.Value;
+            if (!TryGetRow(trigger.LedIndex, out var rowStart, out var rowEnd))
             {
-                _activeKeys.TryRemove(item.Key, out _);
+                _activeTriggers.TryRemove(item.Key, out _);
                 continue;
             }
 
-            var ageMilliseconds = (now - item.Value) * 1000.0 / Stopwatch.Frequency;
+            var ageMilliseconds = (now - trigger.Timestamp) * 1000.0 / Stopwatch.Frequency;
             var headStep = (int)(ageMilliseconds / stepMilliseconds);
-            var distanceLeft = item.Key - rowStart;
-            var distanceRight = rowEnd - item.Key;
+            var distanceLeft = trigger.LedIndex - rowStart;
+            var distanceRight = rowEnd - trigger.LedIndex;
             var direction = distanceRight >= distanceLeft ? 1 : -1;
             var travelLength = Math.Max(distanceLeft, distanceRight) + 1;
             if (headStep >= travelLength + colors.Length)
             {
-                _activeKeys.TryRemove(item.Key, out _);
+                _activeTriggers.TryRemove(item.Key, out _);
                 continue;
             }
 
@@ -339,7 +345,7 @@ internal sealed class LightingEngine : IDisposable
                     continue;
                 }
 
-                var ledIndex = item.Key + direction * travelStep;
+                var ledIndex = trigger.LedIndex + direction * travelStep;
                 if (ledIndex < rowStart || ledIndex > rowEnd)
                 {
                     continue;
@@ -418,6 +424,8 @@ internal sealed class LightingEngine : IDisposable
 
     private static byte Blend(byte background, byte effect, double strength) =>
         (byte)Math.Clamp((int)Math.Round(background + (effect - background) * strength), 0, 255);
+
+    private readonly record struct ActiveTrigger(int LedIndex, long Timestamp);
 
     public void Dispose()
     {
