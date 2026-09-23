@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading;
+using B975RgbApp;
 using Microsoft.Win32.SafeHandles;
 
 namespace B975RgbApp.Services;
@@ -38,7 +39,9 @@ internal sealed class B975HidDevice : IDisposable
     {
         var candidate = FindPreferredInterface()
                         ?? throw new InvalidOperationException(
-                            "رابط نورپردازی Bloody B975 پیدا نشد. اتصال USB و بسته‌بودن KeyDominator را بررسی کن.");
+                            AppLanguage.T(
+                                "رابط نورپردازی Bloody B975 پیدا نشد. اتصال USB و بسته‌بودن KeyDominator را بررسی کن.",
+                                "The Bloody B975 lighting interface was not found. Check the USB connection and make sure KeyDominator is closed."));
 
         var handle = OpenForFeatureWrite(candidate.Path);
         return new B975HidDevice(handle, candidate.FeatureReportLength, candidate.Path);
@@ -65,7 +68,9 @@ internal sealed class B975HidDevice : IDisposable
 
         if (reds.Length < LedValueCount || greens.Length < LedValueCount || blues.Length < LedValueCount)
         {
-            throw new ArgumentException("هر کانال رنگ باید 116 مقدار داشته باشد.");
+            throw new ArgumentException(AppLanguage.T(
+                "هر کانال رنگ باید 116 مقدار داشته باشد.",
+                "Each color channel must contain 116 values."));
         }
 
         var reports = new[]
@@ -93,7 +98,9 @@ internal sealed class B975HidDevice : IDisposable
             {
                 throw new Win32Exception(
                     Marshal.GetLastWin32Error(),
-                    $"ارسال Feature Report شماره {reportNumber} ناموفق بود.");
+                    AppLanguage.T(
+                        $"ارسال Feature Report شماره {reportNumber} ناموفق بود.",
+                        $"Sending Feature Report number {reportNumber} failed."));
             }
 
             if (delayMilliseconds > 0)
@@ -107,7 +114,9 @@ internal sealed class B975HidDevice : IDisposable
     {
         if (_featureReportLength < source.Length)
         {
-            throw new InvalidOperationException("طول Feature Report کیبورد کمتر از 64 بایت است.");
+            throw new InvalidOperationException(AppLanguage.T(
+                "طول Feature Report کیبورد کمتر از 64 بایت است.",
+                "The keyboard Feature Report length is less than 64 bytes."));
         }
 
         if (_featureReportLength == source.Length)
@@ -190,7 +199,11 @@ internal sealed class B975HidDevice : IDisposable
 
         if (infoSet == new IntPtr(-1))
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "امکان فهرست‌کردن HIDها وجود ندارد.");
+            throw new Win32Exception(
+                Marshal.GetLastWin32Error(),
+                AppLanguage.T(
+                    "امکان فهرست‌کردن HIDها وجود ندارد.",
+                    "Unable to enumerate HID devices."));
         }
 
         try
@@ -339,7 +352,9 @@ internal sealed class B975HidDevice : IDisposable
         handle.Dispose();
         throw new Win32Exception(
             error,
-            "رابط نورپردازی باز نشد. KeyDominator را کامل ببند و برنامه را دوباره اجرا کن.");
+            AppLanguage.T(
+                "رابط نورپردازی باز نشد. KeyDominator را کامل ببند و برنامه را دوباره اجرا کن.",
+                "The lighting interface could not be opened. Close KeyDominator completely and restart the application."));
     }
 
     private void ThrowIfDisposed()

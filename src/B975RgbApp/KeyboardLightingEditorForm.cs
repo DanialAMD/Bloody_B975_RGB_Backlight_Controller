@@ -38,15 +38,15 @@ internal sealed class KeyboardLightingEditorForm : Form
         _originalColors = NormalizeColors(colors, fallbackColor);
         ResultColors = _originalColors.ToArray();
 
-        Text = "طراحی رنگ پیش‌فرض Bloody B975";
+        Text = AppLanguage.T("طراحی رنگ پیش‌فرض Bloody B975", "Bloody B975 Default Color Designer");
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(1000, 650);
         Size = new Size(1180, 740);
         AutoScaleMode = AutoScaleMode.Dpi;
         BackColor = Color.FromArgb(241, 244, 248);
         Font = new Font("Segoe UI", 9.5F);
-        RightToLeft = RightToLeft.Yes;
-        RightToLeftLayout = true;
+        RightToLeft = AppLanguage.IsEnglish ? RightToLeft.No : RightToLeft.Yes;
+        RightToLeftLayout = !AppLanguage.IsEnglish;
 
         BuildInterface();
         _keyboard.SetColors(_originalColors);
@@ -88,7 +88,7 @@ internal sealed class KeyboardLightingEditorForm : Form
         var header = new Panel { Dock = DockStyle.Fill };
         header.Controls.Add(new Label
         {
-            Text = "طراحی رنگ پیش‌فرض کلیدها",
+            Text = AppLanguage.T("طراحی رنگ پیش‌فرض کلیدها", "Design Default Key Colors"),
             Font = new Font("Segoe UI", 15F, FontStyle.Bold),
             ForeColor = Color.FromArgb(30, 35, 45),
             AutoSize = true,
@@ -96,7 +96,9 @@ internal sealed class KeyboardLightingEditorForm : Form
         });
         header.Controls.Add(new Label
         {
-            Text = "روی کلید کلیک کن؛ برای چندانتخاب Ctrl را نگه دار یا با ماوس کادر بکش.",
+            Text = AppLanguage.T(
+                "روی کلید کلیک کن؛ برای چندانتخاب Ctrl را نگه دار یا با ماوس کادر بکش.",
+                "Click a key; hold Ctrl for multiple selection or drag a selection box."),
             ForeColor = Color.FromArgb(90, 98, 110),
             AutoSize = true,
             Location = new Point(10, 32)
@@ -126,12 +128,16 @@ internal sealed class KeyboardLightingEditorForm : Form
         var footer = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
+            FlowDirection = AppLanguage.IsEnglish ? FlowDirection.LeftToRight : FlowDirection.RightToLeft,
             WrapContents = false,
             Padding = new Padding(0, 6, 0, 0)
         };
-        var saveButton = MakeActionButton("اعمال و بستن", Color.FromArgb(35, 150, 95));
-        var cancelButton = MakeActionButton("انصراف", Color.FromArgb(100, 108, 120));
+        var saveButton = MakeActionButton(
+            AppLanguage.T("اعمال و بستن", "Apply and Close"),
+            Color.FromArgb(35, 150, 95));
+        var cancelButton = MakeActionButton(
+            AppLanguage.T("انصراف", "Cancel"),
+            Color.FromArgb(100, 108, 120));
         saveButton.Click += (_, _) =>
         {
             ResultColors = _keyboard.GetColors();
@@ -154,7 +160,7 @@ internal sealed class KeyboardLightingEditorForm : Form
 
     private Control BuildSelectionTools()
     {
-        var box = MakeGroup("انتخاب و تاریخچه");
+        var box = MakeGroup(AppLanguage.T("انتخاب و تاریخچه", "Selection and History"));
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -178,8 +184,8 @@ internal sealed class KeyboardLightingEditorForm : Form
         };
         selectionButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         selectionButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        var selectAll = MakeSmallButton("انتخاب همه");
-        var clear = MakeSmallButton("لغو انتخاب");
+        var selectAll = MakeSmallButton(AppLanguage.T("انتخاب همه", "Select All"));
+        var clear = MakeSmallButton(AppLanguage.T("لغو انتخاب", "Clear Selection"));
         selectAll.Dock = DockStyle.Fill;
         clear.Dock = DockStyle.Fill;
         selectAll.Click += (_, _) => _keyboard.SelectAllKeys();
@@ -199,7 +205,7 @@ internal sealed class KeyboardLightingEditorForm : Form
         historyButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
         ConfigureSmallButton(_undoButton, "Undo");
         ConfigureSmallButton(_redoButton, "Redo");
-        var reset = MakeSmallButton("بازنشانی");
+        var reset = MakeSmallButton(AppLanguage.T("بازنشانی", "Reset"));
         _undoButton.Dock = DockStyle.Fill;
         _redoButton.Dock = DockStyle.Fill;
         reset.Dock = DockStyle.Fill;
@@ -225,7 +231,7 @@ internal sealed class KeyboardLightingEditorForm : Form
 
     private Control BuildSolidTools()
     {
-        var box = MakeGroup("رنگ ثابت برای کلیدهای انتخاب‌شده");
+        var box = MakeGroup(AppLanguage.T("رنگ ثابت برای کلیدهای انتخاب‌شده", "Solid Color for Selected Keys"));
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -246,7 +252,7 @@ internal sealed class KeyboardLightingEditorForm : Form
         actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48));
         actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52));
         ConfigureColorButton(_solidColorButton, () => PickColor(ref _solidColor, _solidColorButton));
-        var apply = MakeSmallButton("اعمال رنگ");
+        var apply = MakeSmallButton(AppLanguage.T("اعمال رنگ", "Apply Color"));
         _solidColorButton.Dock = DockStyle.Fill;
         apply.Dock = DockStyle.Fill;
         apply.Click += (_, _) => ApplyChange(() => _keyboard.ApplySolid(_solidColor));
@@ -256,7 +262,9 @@ internal sealed class KeyboardLightingEditorForm : Form
         panel.Controls.Add(new Label
         {
             Dock = DockStyle.Fill,
-            Text = "اگر هیچ کلیدی انتخاب نباشد روی همه اعمال می‌شود.",
+            Text = AppLanguage.T(
+                "اگر هیچ کلیدی انتخاب نباشد روی همه اعمال می‌شود.",
+                "If no key is selected, the color is applied to all keys."),
             ForeColor = Color.FromArgb(100, 108, 120),
             TextAlign = ContentAlignment.MiddleCenter,
             Padding = new Padding(2)
@@ -267,7 +275,7 @@ internal sealed class KeyboardLightingEditorForm : Form
 
     private Control BuildGradientTools()
     {
-        var box = MakeGroup("گرادیان آزاد");
+        var box = MakeGroup(AppLanguage.T("گرادیان آزاد", "Custom Gradient"));
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -334,14 +342,14 @@ internal sealed class KeyboardLightingEditorForm : Form
         _angleInput.TextAlign = HorizontalAlignment.Center;
         anglePanel.Controls.Add(new Label
         {
-            Text = "تعداد رنگ",
+            Text = AppLanguage.T("تعداد رنگ", "Colors"),
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter
         }, 0, 0);
         anglePanel.Controls.Add(_gradientStopCountInput, 1, 0);
         anglePanel.Controls.Add(new Label
         {
-            Text = "زاویه",
+            Text = AppLanguage.T("زاویه", "Angle"),
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter
         }, 2, 0);
@@ -357,7 +365,7 @@ internal sealed class KeyboardLightingEditorForm : Form
         }
         panel.Controls.Add(anglePanel, 0, 1);
 
-        var apply = MakeSmallButton("اعمال گرادیان");
+        var apply = MakeSmallButton(AppLanguage.T("اعمال گرادیان", "Apply Gradient"));
         apply.Dock = DockStyle.Fill;
         apply.Click += (_, _) => ApplyChange(() =>
         {
@@ -413,8 +421,8 @@ internal sealed class KeyboardLightingEditorForm : Form
     {
         var count = _keyboard.SelectedIndices.Count;
         _selectionLabel.Text = count == 0
-            ? "بدون انتخاب — عملیات روی همه کلیدها"
-            : $"{count} کلید انتخاب شده";
+            ? AppLanguage.T("بدون انتخاب — عملیات روی همه کلیدها", "No selection — changes apply to all keys")
+            : AppLanguage.T($"{count} کلید انتخاب شده", $"{count} keys selected");
     }
 
     private void UpdateHistoryButtons()
@@ -470,8 +478,12 @@ internal sealed class KeyboardLightingEditorForm : Form
             _toolTip.SetToolTip(
                 button,
                 index < activeCount
-                    ? $"رنگ {index + 1}: #{LightingSettings.ToHex(color)}"
-                    : $"رنگ {index + 1} غیرفعال است");
+                    ? AppLanguage.T(
+                        $"رنگ {index + 1}: #{LightingSettings.ToHex(color)}",
+                        $"Color {index + 1}: #{LightingSettings.ToHex(color)}")
+                    : AppLanguage.T(
+                        $"رنگ {index + 1} غیرفعال است",
+                        $"Color {index + 1} is disabled"));
         }
     }
 

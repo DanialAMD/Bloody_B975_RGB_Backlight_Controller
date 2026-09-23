@@ -13,6 +13,7 @@ internal sealed class MainForm : Form
     private readonly NotifyIcon _trayIcon;
 
     private readonly Label _statusLabel = new();
+    private readonly ComboBox _languageInput = new();
     private readonly Button _backgroundColorButton = new();
     private readonly Button _loadProfileButton = new();
     private readonly Button _editProfileButton = new();
@@ -39,18 +40,19 @@ internal sealed class MainForm : Form
     public MainForm()
     {
         _settings = SettingsStore.Load();
+        AppLanguage.SetLanguage(_settings.Language);
         _backgroundColor = LightingSettings.ParseColor(_settings.BackgroundHex);
         _effectColors = LoadEffectColors(_settings.EffectColors);
 
-        Text = "Bloody B975 RGB Controller";
+        AppLanguage.BindControl(this, "کنترل RGB کیبورد Bloody B975", "Bloody B975 RGB Controller");
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(780, 660);
         Size = new Size(860, 720);
         AutoScaleMode = AutoScaleMode.Dpi;
         BackColor = Color.FromArgb(244, 246, 249);
         Font = new Font("Segoe UI", 10F);
-        RightToLeft = RightToLeft.Yes;
-        RightToLeftLayout = true;
+        RightToLeft = AppLanguage.IsEnglish ? RightToLeft.No : RightToLeft.Yes;
+        RightToLeftLayout = !AppLanguage.IsEnglish;
 
         BuildInterface();
         ApplySettingsToControls();
@@ -111,21 +113,22 @@ internal sealed class MainForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
 
         var header = new Panel { Dock = DockStyle.Fill };
-        header.Controls.Add(new Label
+        header.Controls.Add(AppLanguage.BindControl(new Label
         {
-            Text = "کنترل نورپردازی Bloody B975",
             Font = new Font("Segoe UI", 16F, FontStyle.Bold),
             ForeColor = Color.FromArgb(30, 35, 45),
             AutoSize = true,
             Location = new Point(10, 4)
-        });
-        header.Controls.Add(new Label
+        }, "کنترل نورپردازی Bloody B975", "Bloody B975 Lighting Control"));
+        header.Controls.Add(AppLanguage.BindControl(new Label
         {
-            Text = "Breathing پس‌زمینه + Flash/Fade، Meteor یا انفجار شعاعی",
             ForeColor = Color.FromArgb(95, 103, 115),
             AutoSize = true,
             Location = new Point(12, 40)
-        });
+        },
+        "Breathing پس‌زمینه + Flash/Fade، Meteor یا انفجار شعاعی",
+        "Breathing background + Flash/Fade, Meteor or radial explosion"));
+        header.Controls.Add(BuildLanguageSelector());
         root.Controls.Add(header, 0, 0);
 
         var statusPanel = new Panel
@@ -135,10 +138,14 @@ internal sealed class MainForm : Form
             Padding = new Padding(12),
             Margin = new Padding(0, 0, 0, 10)
         };
-        _statusLabel.Text = "متوقف — KeyDominator باید بسته باشد";
-        _statusLabel.ForeColor = Color.FromArgb(110, 75, 15);
+        SetStatus(
+            "متوقف — KeyDominator باید بسته باشد",
+            "Stopped — KeyDominator must be closed",
+            Color.FromArgb(110, 75, 15));
         _statusLabel.Dock = DockStyle.Fill;
-        _statusLabel.TextAlign = ContentAlignment.MiddleRight;
+        _statusLabel.TextAlign = AppLanguage.IsEnglish
+            ? ContentAlignment.MiddleLeft
+            : ContentAlignment.MiddleRight;
         _statusLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
         statusPanel.Controls.Add(_statusLabel);
         root.Controls.Add(statusPanel, 0, 1);
@@ -160,23 +167,23 @@ internal sealed class MainForm : Form
         }
 
         ConfigureColorButton(_backgroundColorButton, (_, _) => SelectBackgroundColor());
-        AddSettingRow(settingsPanel, 0, "رنگ Breathing پس‌زمینه", _backgroundColorButton);
+        AddSettingRow(settingsPanel, 0, "رنگ Breathing پس‌زمینه", "Breathing background color", _backgroundColorButton);
 
         var profileControls = BuildProfileControls();
-        AddSettingRow(settingsPanel, 1, "رنگ‌بندی جداگانه کلیدها", profileControls);
-        AddSettingRow(settingsPanel, 2, "نوع افکت واکنشی", BuildReactiveEffectControls());
-        AddSettingRow(settingsPanel, 3, "رنگ‌های افکت واکنشی", BuildEffectColorControls());
+        AddSettingRow(settingsPanel, 1, "رنگ‌بندی جداگانه کلیدها", "Per-key default colors", profileControls);
+        AddSettingRow(settingsPanel, 2, "نوع افکت واکنشی", "Reactive effect type", BuildReactiveEffectControls());
+        AddSettingRow(settingsPanel, 3, "رنگ‌های افکت واکنشی", "Reactive effect colors", BuildEffectColorControls());
 
         ConfigureNumber(_periodInput, 500, 10_000, 100, " ms");
         ConfigureNumber(_minimumBrightnessInput, 0, 90, 1, "%");
         ConfigureNumber(_fadeInput, 100, 3_000, 50, " ms");
-        AddSettingRow(settingsPanel, 4, "زمان یک چرخه Breathing", _periodInput);
-        AddSettingRow(settingsPanel, 5, "حداقل روشنایی", _minimumBrightnessInput);
-        AddSettingRow(settingsPanel, 6, "مدت افکت واکنشی", _fadeInput);
+        AddSettingRow(settingsPanel, 4, "زمان یک چرخه Breathing", "Breathing cycle duration", _periodInput);
+        AddSettingRow(settingsPanel, 5, "حداقل روشنایی", "Minimum brightness", _minimumBrightnessInput);
+        AddSettingRow(settingsPanel, 6, "مدت افکت واکنشی", "Reactive effect duration", _fadeInput);
 
-        _startWithWindowsCheckBox.Text = "همراه ویندوز اجرا شود";
-        _autoStartCheckBox.Text = "پس از اجرای برنامه افکت خودکار شروع شود";
-        _closeToTrayCheckBox.Text = "با بستن پنجره کنار ساعت باقی بماند";
+        AppLanguage.BindControl(_startWithWindowsCheckBox, "همراه ویندوز اجرا شود", "Start with Windows");
+        AppLanguage.BindControl(_autoStartCheckBox, "پس از اجرای برنامه افکت خودکار شروع شود", "Start the effect automatically when the app opens");
+        AppLanguage.BindControl(_closeToTrayCheckBox, "با بستن پنجره کنار ساعت باقی بماند", "Keep running in the system tray when closed");
         ConfigureCheckBox(_startWithWindowsCheckBox);
         ConfigureCheckBox(_autoStartCheckBox);
         ConfigureCheckBox(_closeToTrayCheckBox);
@@ -191,12 +198,12 @@ internal sealed class MainForm : Form
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
+            FlowDirection = AppLanguage.IsEnglish ? FlowDirection.LeftToRight : FlowDirection.RightToLeft,
             Padding = new Padding(0, 9, 0, 0),
             WrapContents = false
         };
-        ConfigureActionButton(_startButton, "شروع", Color.FromArgb(30, 155, 95));
-        ConfigureActionButton(_stopButton, "توقف", Color.FromArgb(90, 100, 115));
+        ConfigureActionButton(_startButton, "شروع", "Start", Color.FromArgb(30, 155, 95));
+        ConfigureActionButton(_stopButton, "توقف", "Stop", Color.FromArgb(90, 100, 115));
         _startButton.Click += async (_, _) => await StartLightingAsync();
         _stopButton.Click += async (_, _) => await StopLightingAsync();
         actions.Controls.Add(_startButton);
@@ -204,6 +211,35 @@ internal sealed class MainForm : Form
         root.Controls.Add(actions, 0, 3);
 
         Controls.Add(root);
+    }
+
+    private Control BuildLanguageSelector()
+    {
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Right,
+            Width = 205,
+            ColumnCount = 2,
+            RowCount = 1,
+            Padding = new Padding(0, 10, 0, 10)
+        };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+
+        _languageInput.DropDownStyle = ComboBoxStyle.DropDownList;
+        _languageInput.Dock = DockStyle.Fill;
+        _languageInput.Items.AddRange(["فارسی", "English"]);
+        _languageInput.SelectedIndex = AppLanguage.IsEnglish ? 1 : 0;
+        _languageInput.SelectedIndexChanged += (_, _) => ChangeLanguage();
+
+        var label = AppLanguage.BindControl(new Label
+        {
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleRight
+        }, "زبان", "Language");
+        panel.Controls.Add(_languageInput, 0, 0);
+        panel.Controls.Add(label, 1, 0);
+        return panel;
     }
 
     private Control BuildProfileControls()
@@ -221,13 +257,15 @@ internal sealed class MainForm : Form
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
 
         _profileNameLabel.Dock = DockStyle.Fill;
-        _profileNameLabel.TextAlign = ContentAlignment.MiddleRight;
+        _profileNameLabel.TextAlign = AppLanguage.IsEnglish
+            ? ContentAlignment.MiddleLeft
+            : ContentAlignment.MiddleRight;
         _profileNameLabel.AutoEllipsis = true;
         _profileNameLabel.ForeColor = Color.FromArgb(90, 98, 110);
 
-        ConfigureSmallButton(_loadProfileButton, "بارگذاری");
-        ConfigureSmallButton(_editProfileButton, "طراحی");
-        ConfigureSmallButton(_clearProfileButton, "حذف");
+        ConfigureSmallButton(_loadProfileButton, "بارگذاری", "Load");
+        ConfigureSmallButton(_editProfileButton, "طراحی", "Design");
+        ConfigureSmallButton(_clearProfileButton, "حذف", "Clear");
         _loadProfileButton.Click += (_, _) => LoadCkPannel();
         _editProfileButton.Click += (_, _) => OpenKeyboardEditor();
         _clearProfileButton.Click += (_, _) => ClearCkPannel();
@@ -255,15 +293,17 @@ internal sealed class MainForm : Form
         _effectModeInput.DropDownStyle = ComboBoxStyle.DropDownList;
         _effectModeInput.Dock = DockStyle.Fill;
         _effectModeInput.Margin = new Padding(3);
-        _effectModeInput.Items.AddRange(["Flash / Fade", "Meteor ردیفی", "انفجار شعاعی"]);
+        UpdateEffectModeItems();
         _effectModeInput.SelectedIndexChanged += (_, _) => UpdateEffectUiState();
 
         _meteorProfileLabel.Dock = DockStyle.Fill;
-        _meteorProfileLabel.TextAlign = ContentAlignment.MiddleRight;
+        _meteorProfileLabel.TextAlign = AppLanguage.IsEnglish
+            ? ContentAlignment.MiddleLeft
+            : ContentAlignment.MiddleRight;
         _meteorProfileLabel.AutoEllipsis = true;
         _meteorProfileLabel.ForeColor = Color.FromArgb(90, 98, 110);
 
-        ConfigureSmallButton(_loadMeteorButton, "بارگذاری ckButton");
+        ConfigureSmallButton(_loadMeteorButton, "بارگذاری ckButton", "Load ckButton");
         _loadMeteorButton.Click += (_, _) => LoadMeteorProfile();
 
         panel.Controls.Add(_meteorProfileLabel, 0, 0);
@@ -298,9 +338,9 @@ internal sealed class MainForm : Form
         return panel;
     }
 
-    private static void ConfigureSmallButton(Button button, string text)
+    private static void ConfigureSmallButton(Button button, string persian, string english)
     {
-        button.Text = text;
+        AppLanguage.BindControl(button, persian, english);
         button.Dock = DockStyle.Fill;
         button.Margin = new Padding(2);
         button.FlatStyle = FlatStyle.Flat;
@@ -309,16 +349,20 @@ internal sealed class MainForm : Form
         button.Font = new Font("Segoe UI", 8.5F);
     }
 
-    private static void AddSettingRow(TableLayoutPanel panel, int row, string title, Control input)
+    private static void AddSettingRow(
+        TableLayoutPanel panel,
+        int row,
+        string persianTitle,
+        string englishTitle,
+        Control input)
     {
-        var label = new Label
+        var label = AppLanguage.BindControl(new Label
         {
-            Text = title,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleRight,
             ForeColor = Color.FromArgb(45, 52, 62),
             Padding = new Padding(0, 0, 8, 0)
-        };
+        }, persianTitle, englishTitle);
         input.Dock = DockStyle.Fill;
         input.Margin = new Padding(4);
         panel.Controls.Add(label, 1, row);
@@ -345,14 +389,16 @@ internal sealed class MainForm : Form
     private static void ConfigureCheckBox(CheckBox checkBox)
     {
         checkBox.Dock = DockStyle.Fill;
-        checkBox.TextAlign = ContentAlignment.MiddleRight;
+        checkBox.TextAlign = AppLanguage.IsEnglish
+            ? ContentAlignment.MiddleLeft
+            : ContentAlignment.MiddleRight;
         checkBox.Padding = new Padding(8, 0, 8, 0);
         checkBox.Cursor = Cursors.Hand;
     }
 
-    private static void ConfigureActionButton(Button button, string text, Color color)
+    private static void ConfigureActionButton(Button button, string persian, string english, Color color)
     {
-        button.Text = text;
+        AppLanguage.BindControl(button, persian, english);
         button.Size = new Size(135, 40);
         button.BackColor = color;
         button.ForeColor = Color.White;
@@ -382,6 +428,53 @@ internal sealed class MainForm : Form
         UpdateProfileLabel();
         UpdateEffectUiState();
         UpdateUiState();
+    }
+
+    private void ChangeLanguage()
+    {
+        var language = _languageInput.SelectedIndex == 1 ? "en" : "fa";
+        if (string.Equals(AppLanguage.Current, language, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        AppLanguage.SetLanguage(language);
+        _settings.Language = language;
+        RightToLeft = AppLanguage.IsEnglish ? RightToLeft.No : RightToLeft.Yes;
+        RightToLeftLayout = !AppLanguage.IsEnglish;
+
+        SuspendLayout();
+        AppLanguage.RefreshControls(this);
+        AppLanguage.RefreshItems(_trayIcon.ContextMenuStrip!.Items);
+        _trayIcon.ContextMenuStrip.RightToLeft = AppLanguage.IsEnglish ? RightToLeft.No : RightToLeft.Yes;
+        UpdateEffectModeItems();
+        UpdateProfileLabel();
+        UpdateEffectUiState();
+        ResumeLayout(true);
+
+        SettingsStore.Save(CaptureSettings());
+    }
+
+    private void UpdateEffectModeItems()
+    {
+        var selectedIndex = _effectModeInput.SelectedIndex;
+        _effectModeInput.Items.Clear();
+        _effectModeInput.Items.AddRange(
+        [
+            "Flash / Fade",
+            AppLanguage.T("Meteor ردیفی", "Row Meteor"),
+            AppLanguage.T("انفجار شعاعی", "Radial Explosion")
+        ]);
+        if (selectedIndex >= 0)
+        {
+            _effectModeInput.SelectedIndex = selectedIndex;
+        }
+    }
+
+    private void SetStatus(string persian, string english, Color color)
+    {
+        AppLanguage.BindControl(_statusLabel, persian, english);
+        _statusLabel.ForeColor = color;
     }
 
     private void SelectBackgroundColor()
@@ -425,7 +518,7 @@ internal sealed class MainForm : Form
     {
         using var dialog = new OpenFileDialog
         {
-            Title = "انتخاب پروفایل رنگ Bloody",
+            Title = AppLanguage.T("انتخاب پروفایل رنگ Bloody", "Select a Bloody color profile"),
             Filter = "Bloody panel (*.ckPannel)|*.ckPannel|All files (*.*)|*.*",
             CheckFileExists = true,
             Multiselect = false
@@ -442,8 +535,10 @@ internal sealed class MainForm : Form
             _settings.BackgroundLedHex = profile.LedHexColors;
             _settings.BackgroundProfileName = profile.Name;
             UpdateProfileLabel();
-            _statusLabel.Text = $"پروفایل {profile.Name} آماده است — برای اعمال، شروع را بزن";
-            _statusLabel.ForeColor = Color.FromArgb(30, 95, 150);
+            SetStatus(
+                $"پروفایل {profile.Name} آماده است — برای اعمال، شروع را بزن",
+                $"Profile {profile.Name} is ready — press Start to apply it",
+                Color.FromArgb(30, 95, 150));
         }
         catch (Exception exception)
         {
@@ -467,18 +562,20 @@ internal sealed class MainForm : Form
         }
 
         _settings.BackgroundLedHex = editor.ResultColors;
-        _settings.BackgroundProfileName = "طرح ساخته‌شده در برنامه";
+        _settings.BackgroundProfileName = "__InAppDesign__";
         SettingsStore.Save(CaptureSettings());
         UpdateProfileLabel();
-        _statusLabel.Text = "طرح جدید آماده است — برای دیدنش روی کیبورد، شروع را بزن";
-        _statusLabel.ForeColor = Color.FromArgb(30, 95, 150);
+        SetStatus(
+            "طرح جدید آماده است — برای دیدنش روی کیبورد، شروع را بزن",
+            "The new design is ready — press Start to show it on the keyboard",
+            Color.FromArgb(30, 95, 150));
     }
 
     private void LoadMeteorProfile()
     {
         using var dialog = new OpenFileDialog
         {
-            Title = "انتخاب افکت Meteor نرم‌افزار Bloody",
+            Title = AppLanguage.T("انتخاب افکت Meteor نرم‌افزار Bloody", "Select a Bloody Meteor effect"),
             Filter = "Bloody button effect (*.ckButton)|*.ckButton|All files (*.*)|*.*",
             CheckFileExists = true,
             Multiselect = false
@@ -497,8 +594,10 @@ internal sealed class MainForm : Form
             _settings.MeteorProfileName = profile.Name;
             _effectModeInput.SelectedIndex = 1;
             UpdateEffectUiState();
-            _statusLabel.Text = $"افکت {profile.Name} آماده است — برای اعمال، شروع را بزن";
-            _statusLabel.ForeColor = Color.FromArgb(30, 95, 150);
+            SetStatus(
+                $"افکت {profile.Name} آماده است — برای اعمال، شروع را بزن",
+                $"Effect {profile.Name} is ready — press Start to apply it",
+                Color.FromArgb(30, 95, 150));
         }
         catch (Exception exception)
         {
@@ -509,9 +608,15 @@ internal sealed class MainForm : Form
     private void UpdateProfileLabel()
     {
         var active = _settings.BackgroundLedHex is { Length: >= 116 };
+        var profileName = _settings.BackgroundProfileName;
+        if (profileName is "__InAppDesign__" or "طرح ساخته‌شده در برنامه" or "In-app design")
+        {
+            profileName = AppLanguage.T("طرح ساخته‌شده در برنامه", "In-app design");
+        }
+
         _profileNameLabel.Text = active
-            ? _settings.BackgroundProfileName ?? "پروفایل سفارشی"
-            : "رنگ یکپارچه";
+            ? profileName ?? AppLanguage.T("پروفایل سفارشی", "Custom profile")
+            : AppLanguage.T("رنگ یکپارچه", "Solid color");
         _clearProfileButton.Enabled = active && !_engine.IsRunning;
     }
 
@@ -519,7 +624,7 @@ internal sealed class MainForm : Form
     {
         var meteor = _effectModeInput.SelectedIndex == 1;
         _meteorProfileLabel.Text = meteor
-            ? _settings.MeteorProfileName ?? "Meteor استاندارد"
+            ? _settings.MeteorProfileName ?? AppLanguage.T("Meteor استاندارد", "Standard Meteor")
             : "—";
         _loadMeteorButton.Enabled = !_engine.IsRunning && meteor;
         foreach (var button in _effectColorButtons)
@@ -560,6 +665,7 @@ internal sealed class MainForm : Form
 
     private LightingSettings CaptureSettings()
     {
+        _settings.Language = AppLanguage.Current;
         _settings.BackgroundHex = LightingSettings.ToHex(_backgroundColor);
         _settings.EffectHex = LightingSettings.ToHex(_effectColors[0]);
         _settings.EffectColors = _effectColors.Select(LightingSettings.ToHex).ToArray();
@@ -593,13 +699,19 @@ internal sealed class MainForm : Form
 
             _keyboardHook.Start();
             _engine.Start(settings);
-            _statusLabel.Text = settings.ReactiveEffectMode switch
+            var status = settings.ReactiveEffectMode switch
             {
-                "Meteor" => "فعال — Breathing و Meteor ردیفی در حال اجراست",
-                "Explosion" => "فعال — Breathing و انفجار شعاعی در حال اجراست",
-                _ => "فعال — Breathing و Flash/Fade در حال اجراست"
+                "Meteor" => (
+                    "فعال — Breathing و Meteor ردیفی در حال اجراست",
+                    "Active — Breathing and Row Meteor are running"),
+                "Explosion" => (
+                    "فعال — Breathing و انفجار شعاعی در حال اجراست",
+                    "Active — Breathing and Radial Explosion are running"),
+                _ => (
+                    "فعال — Breathing و Flash/Fade در حال اجراست",
+                    "Active — Breathing and Flash/Fade are running")
             };
-            _statusLabel.ForeColor = Color.FromArgb(20, 125, 75);
+            SetStatus(status.Item1, status.Item2, Color.FromArgb(20, 125, 75));
             UpdateUiState();
         }
         catch (Exception exception)
@@ -607,8 +719,10 @@ internal sealed class MainForm : Form
             _keyboardHook.Stop();
             await _engine.StopAsync();
             ShowError(exception.Message);
-            _statusLabel.Text = "خطا — ارتباط با کیبورد برقرار نشد";
-            _statusLabel.ForeColor = Color.FromArgb(180, 45, 45);
+            SetStatus(
+                "خطا — ارتباط با کیبورد برقرار نشد",
+                "Error — could not connect to the keyboard",
+                Color.FromArgb(180, 45, 45));
             UpdateUiState();
         }
     }
@@ -617,8 +731,10 @@ internal sealed class MainForm : Form
     {
         _keyboardHook.Stop();
         await _engine.StopAsync();
-        _statusLabel.Text = "متوقف — نور روی رنگ پس‌زمینه ثابت شد";
-        _statusLabel.ForeColor = Color.FromArgb(110, 75, 15);
+        SetStatus(
+            "متوقف — نور روی رنگ پس‌زمینه ثابت شد",
+            "Stopped — lighting is fixed on the background colors",
+            Color.FromArgb(110, 75, 15));
         UpdateUiState();
     }
 
@@ -632,8 +748,10 @@ internal sealed class MainForm : Form
         BeginInvoke((Action)(() =>
         {
             _keyboardHook.Stop();
-            _statusLabel.Text = "خطا در ارسال فریم‌های نورپردازی";
-            _statusLabel.ForeColor = Color.FromArgb(180, 45, 45);
+            SetStatus(
+                "خطا در ارسال فریم‌های نورپردازی",
+                "Error while sending lighting frames",
+                Color.FromArgb(180, 45, 45));
             UpdateUiState();
             ShowError(exception.Message);
         }));
@@ -661,11 +779,14 @@ internal sealed class MainForm : Form
 
     private NotifyIcon BuildTrayIcon()
     {
-        var menu = new ContextMenuStrip { RightToLeft = RightToLeft.Yes };
-        var openItem = new ToolStripMenuItem("بازکردن برنامه");
-        var startItem = new ToolStripMenuItem("شروع افکت");
-        var stopItem = new ToolStripMenuItem("توقف افکت");
-        var exitItem = new ToolStripMenuItem("خروج کامل");
+        var menu = new ContextMenuStrip
+        {
+            RightToLeft = AppLanguage.IsEnglish ? RightToLeft.No : RightToLeft.Yes
+        };
+        var openItem = AppLanguage.BindItem(new ToolStripMenuItem(), "بازکردن برنامه", "Open application");
+        var startItem = AppLanguage.BindItem(new ToolStripMenuItem(), "شروع افکت", "Start effect");
+        var stopItem = AppLanguage.BindItem(new ToolStripMenuItem(), "توقف افکت", "Stop effect");
+        var exitItem = AppLanguage.BindItem(new ToolStripMenuItem(), "خروج کامل", "Exit completely");
 
         openItem.Click += (_, _) => RestoreFromTray();
         startItem.Click += async (_, _) => await StartLightingAsync();
@@ -732,6 +853,8 @@ internal sealed class MainForm : Form
             MessageBoxButtons.OK,
             MessageBoxIcon.Error,
             MessageBoxDefaultButton.Button1,
-            MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign);
+            AppLanguage.IsEnglish
+                ? (MessageBoxOptions)0
+                : MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign);
     }
 }

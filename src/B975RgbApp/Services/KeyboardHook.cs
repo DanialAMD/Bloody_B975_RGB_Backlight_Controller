@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using B975RgbApp;
 
 namespace B975RgbApp.Services;
 
@@ -36,7 +37,9 @@ internal sealed class KeyboardHook : IDisposable
         {
             throw new Win32Exception(
                 Marshal.GetLastWin32Error(),
-                "شنود سراسری کیبورد فعال نشد.");
+                AppLanguage.T(
+                    "شنود سراسری کیبورد فعال نشد.",
+                    "The global keyboard hook could not be started."));
         }
     }
 

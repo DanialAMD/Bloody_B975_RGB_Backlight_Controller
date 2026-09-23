@@ -5,6 +5,7 @@ namespace B975RgbApp.Models;
 
 public sealed class LightingSettings
 {
+    public string Language { get; set; } = "fa";
     public string BackgroundHex { get; set; } = "300000";
     public string[]? BackgroundLedHex { get; set; }
     public string? BackgroundProfileName { get; set; }
@@ -24,6 +25,7 @@ public sealed class LightingSettings
 
     public LightingSettings Clone() => new()
     {
+        Language = Language,
         BackgroundHex = BackgroundHex,
         BackgroundLedHex = BackgroundLedHex?.ToArray(),
         BackgroundProfileName = BackgroundProfileName,

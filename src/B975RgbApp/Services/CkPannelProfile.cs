@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using B975RgbApp;
 using B975RgbApp.Models;
 
 namespace B975RgbApp.Services;
@@ -11,17 +12,23 @@ internal sealed record CkPannelProfile(string Name, string[] LedHexColors)
     {
         var document = XDocument.Load(path, LoadOptions.None);
         var root = document.Root
-                   ?? throw new InvalidDataException("ساختار فایل ckPannel معتبر نیست.");
+                   ?? throw new InvalidDataException(AppLanguage.T(
+                       "ساختار فایل ckPannel معتبر نیست.",
+                       "The ckPannel file structure is invalid."));
         var colorPicture = root.Element("ColorPicture")?.Value;
         if (string.IsNullOrWhiteSpace(colorPicture))
         {
-            throw new InvalidDataException("بخش ColorPicture در فایل ckPannel پیدا نشد.");
+            throw new InvalidDataException(AppLanguage.T(
+                "بخش ColorPicture در فایل ckPannel پیدا نشد.",
+                "The ColorPicture section was not found in the ckPannel file."));
         }
 
         var source = colorPicture.Split(',', StringSplitOptions.TrimEntries);
         if (source.Length < 104)
         {
-            throw new InvalidDataException("تعداد رنگ‌های فایل برای چیدمان B975 کافی نیست.");
+            throw new InvalidDataException(AppLanguage.T(
+                "تعداد رنگ‌های فایل برای چیدمان B975 کافی نیست.",
+                "The file does not contain enough colors for the B975 layout."));
         }
 
         var colors = new string[LedCount];
@@ -40,7 +47,9 @@ internal sealed record CkPannelProfile(string Name, string[] LedHexColors)
         var normalized = value.Trim().TrimStart('#');
         if (normalized.Length != 6 || !normalized.All(Uri.IsHexDigit))
         {
-            throw new InvalidDataException($"رنگ شماره {index} در فایل ckPannel معتبر نیست.");
+            throw new InvalidDataException(AppLanguage.T(
+                $"رنگ شماره {index} در فایل ckPannel معتبر نیست.",
+                $"Color number {index} in the ckPannel file is invalid."));
         }
 
         // ckPannel uses logical RGB. The verified physical red/blue channel swap
